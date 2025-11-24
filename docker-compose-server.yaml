@@ -16,6 +16,16 @@ services:
     volumes:
       - ./vpn-config/server:/etc/openvpn  # Конфигурация сервера
       - ./scripts:/scripts  # Скрипты запуска и тестирования
+    environment:
+      # Настройки для генерации сертификатов (можно переопределить)
+      - CERT_COUNTRY=${CERT_COUNTRY:-BY}
+      - CERT_STATE=${CERT_STATE:-Minsk}
+      - CERT_CITY=${CERT_CITY:-Minsk}
+      - CERT_ORG=${CERT_ORG:-TestVPN}
+      - CERT_OU_CA=${CERT_OU_CA:-IT}
+      - CERT_OU_SERVER=${CERT_OU_SERVER:-Server}
+      - CERT_CN_CA=${CERT_CN_CA:-TestVPN-CA}
+      - CERT_CN_SERVER=${CERT_CN_SERVER:-server}
     command: /scripts/start-server.sh  # Запуск сервера вместо bash
     restart: unless-stopped
 
