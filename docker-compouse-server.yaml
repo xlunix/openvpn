@@ -1,0 +1,32 @@
+services:
+  # VPN сервер: создает VPN туннель на 10.8.0.1, слушает на порту 1194
+  # Использует один общий образ для всех сервисов (Dockerfile)
+  openvpn-server:
+    build:
+      context: .
+      dockerfile: Dockerfile  # Один Dockerfile для всех сервисов
+    container_name: openvpn-server
+    cap_add:
+      - NET_ADMIN  # Для создания сетевых интерфейсов
+    devices:
+      - /dev/net/tun  # TUN интерфейс для VPN
+    networks:
+      vpn-network:
+        ipv4_address: 10.9.0.1  # Docker IP адрес сервера
+    volumes:
+      - ./vpn-config/server:/etc/openvpn  # Конфигурация сервера
+      - ./scripts:/scripts  # Скрипты запуска и тестирования
+    command: /scripts/start-server.sh  # Запуск сервера вместо bash
+    restart: unless-stopped
+
+  # VPN клиент: подключается к серверу, получает VPN IP 10.8.0.2
+  # Использует тот же образ, что и сервер, но с другой конфигурацией
+
+networks:
+  vpn-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.9.0.0/24
+          gateway: 10.9.0.254

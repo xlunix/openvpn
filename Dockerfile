@@ -29,6 +29,10 @@ COPY bee2evp/ /build/bee2evp/
 COPY openvpn/ /build/openvpn/
 COPY Makefile /build/
 
+# Копирование скриптов
+COPY scripts/ /scripts/
+RUN chmod +x /scripts/*.sh
+
 # Установка переменных окружения
 ENV CMAKE_BUILD_TYPE=Release
 ENV PATH=/build/build/install/bin:$PATH
