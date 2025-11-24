@@ -1,0 +1,54 @@
+# Build and run tests
+
+name: build
+
+on:
+  push:
+    branches: master
+  pull_request:
+    branches: master
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    container: ubuntu
+    strategy:
+      matrix:
+        openssl-config:
+          - tag: "OpenSSL_1_1_1i"
+
+          - tag: "openssl-3.3.1"
+    env:
+      BEE2_BRANCH: master
+      local: ${{github.workspace}}/build/local
+    steps:
+    - name: Setup packages
+      run: |
+        apt update
+        apt install -y git cmake curl bash gpg
+        git config --global --add safe.directory '*'
+    - name: Get source
+      uses: actions/checkout@v5
+    - name: Setup Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: 3.12
+    - name: Build
+      run: |
+        bash ./scripts/build.sh -s -b --build-type=Coverage ${{ matrix.openssl-config.tag }}
+    - name: Test Bee2evp
+      continue-on-error: true
+      run: |
+        bash ./scripts/build.sh -t ${{ matrix.openssl-config.tag }}
+    - name: Upload report to Codecov
+      uses: codecov/codecov-action@v5
+      with:
+        directory: ${{github.workspace}}/build
+        fail_ci_if_error: true
+        token: ${{ secrets.CODECOV_TOKEN }}
+        verbose: true
