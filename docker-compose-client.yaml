@@ -1,0 +1,31 @@
+services:
+  # VPN клиент: подключается к серверу, получает VPN IP 10.8.0.2
+  # Использует тот же образ, что и сервер, но с другой конфигурацией
+  openvpn-client:
+    build:
+      context: .
+      dockerfile: Dockerfile  # Тот же Dockerfile - один образ для всех
+    container_name: openvpn-client
+    cap_add:
+      - NET_ADMIN  # Для создания сетевых интерфейсов
+    devices:
+      - /dev/net/tun  # TUN интерфейс для VPN
+    networks:
+      vpn-network:
+        ipv4_address: 10.9.0.10  # Docker IP адрес клиента
+    volumes:
+      - ./vpn-config/client:/etc/openvpn  # Конфигурация клиента (отличается от сервера)
+      - ./scripts:/scripts  # Те же скрипты
+    command: /scripts/start-client.sh  # Запуск клиента
+    depends_on:
+      - openvpn-server  # Ждет запуска сервера
+    restart: unless-stopped
+    
+networks:
+  vpn-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.9.0.0/24
+          gateway: 10.9.0.254
