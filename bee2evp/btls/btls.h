@@ -1,0 +1,158 @@
+/*
+*******************************************************************************
+\file btls.c
+\project bee2evp [EVP-interfaces over bee2 / engine of OpenSSL]
+\brief Definitions for BTLS ciphersuites
+\created 2021.01.12
+\version 2021.06.09
+\copyright The Bee2evp authors
+\license Licensed under the Apache License, Version 2.0 (see LICENSE.txt).
+*******************************************************************************
+*/
+
+#ifndef _BTLS_H
+#define _BTLS_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include <openssl/evp.h>
+#include "../include/crypto/asn1.h"
+#include "../crypto/objects/obj_dat.h"
+#include "../include/internal/packet.h"
+#include "../include/internal/statem.h"
+
+/*
+*******************************************************************************
+Идентификаторы
+*******************************************************************************
+*/
+
+/* ssl_local.h */
+#define SSL_kBDHE               0x00000400U
+#define SSL_kBDHT				0x00000800U
+#define SSL_kBDHEPSK			0x00001000U
+#define SSL_kBDHTPSK			0x00002000U
+
+#define SSL_aBIGN               0x00000100U
+
+#define SSL_BELTCTR             0x02000000U
+#define SSL_BELTDWP				0x01000000U
+
+#define SSL_BELTMAC             0x00001000U
+#define SSL_HBELT               0x00002000U
+#define SSL_BASH384             0x00004000U
+#define SSL_BASH512             0x00008000U
+
+#define SSL_MD_BELTMAC_IDX 14
+#define SSL_MD_HBELT_IDX 15
+#define SSL_MD_BASH384_IDX 16
+#define SSL_MD_BASH512_IDX 17
+
+#define SSL_HANDSHAKE_MAC_BELTMAC SSL_MD_BELTMAC_IDX
+#define SSL_HANDSHAKE_MAC_HBELT SSL_MD_HBELT_IDX
+
+#define TLS1_PRF_HBELT (SSL_HANDSHAKE_MAC_HBELT << TLS1_PRF_DGST_SHIFT)
+#define TLS1_ALG_2 (TLS1_PRF_HBELT) | SSL_HANDSHAKE_MAC_HBELT
+
+#define SSL_PKEY_BIGN 9
+
+#define TLSEXT_SIGALG_bign_sign_128 0xe7e7
+#define TLSEXT_SIGALG_bign_sign_192 0xe8e8
+#define TLSEXT_SIGALG_bign_sign_256 0xe9e9
+
+/* ssl.h */
+#define SSL_TXT_kBDHE "kBDHE"
+#define SSL_TXT_kBDHT "kBDHT"
+#define SSL_TXT_kBDHEPSK "kBDHEPSK"
+#define SSL_TXT_kBDHTPSK "kBDHTPSK"
+#define SSL_TXT_aBIGN "aBIGN"
+#define SSL_TXT_BELTCTR "BELTCTR"
+#define SSL_TXT_BELTMAC "BELTMAC"
+#define SSL_TXT_BELTDWP "BELTDWP"
+
+/* tls1.h */
+# define TLS_CT_BIGN_SIGN      231
+
+# define BTLS1_RFC_DHE_BIGN_WITH_BELT_CTR_MAC_HBELT\
+	"BTLS_DHE_BIGN_WITH_BELT_CTR_MAC_HBELT"
+# define BTLS1_TXT_DHE_BIGN_WITH_BELT_CTR_MAC_HBELT\
+	"DHE-BIGN-WITH-BELT-CTR-MAC-HBELT"
+# define BTLS1_RFC_DHE_BIGN_WITH_BELT_DWP_HBELT\
+	"BTLS_DHE_BIGN_WITH_BELT_DWP_HBELT"
+# define BTLS1_TXT_DHE_BIGN_WITH_BELT_DWP_HBELT\
+	"DHE-BIGN-WITH-BELT-DWP-HBELT"
+
+# define BTLS1_RFC_DHT_BIGN_WITH_BELT_CTR_MAC_HBELT\
+	"BTLS_DHT_BIGN_WITH_BELT_CTR_MAC_HBELT"
+# define BTLS1_TXT_DHT_BIGN_WITH_BELT_CTR_MAC_HBELT\
+	"DHT-BIGN-WITH-BELT-CTR-MAC-HBELT"
+# define BTLS1_RFC_DHT_BIGN_WITH_BELT_DWP_HBELT\
+	"BTLS_DHT_BIGN_WITH_BELT_DWP_HBELT"
+# define BTLS1_TXT_DHT_BIGN_WITH_BELT_DWP_HBELT\
+	"DHT-BIGN-WITH-BELT-DWP-HBELT"
+
+# define BTLS1_RFC_DHE_PSK_BIGN_WITH_BELT_CTR_MAC_HBELT\
+	"BTLS_DHE_PSK_BIGN_WITH_BELT_CTR_MAC_HBELT"
+# define BTLS1_TXT_DHE_PSK_BIGN_WITH_BELT_CTR_MAC_HBELT\
+	"DHE-PSK-BIGN-WITH-BELT-CTR-MAC-HBELT"
+# define BTLS1_RFC_DHE_PSK_BIGN_WITH_BELT_DWP_HBELT\
+	"BTLS_DHE_PSK_BIGN_WITH_BELT_DWP_HBELT"
+# define BTLS1_TXT_DHE_PSK_BIGN_WITH_BELT_DWP_HBELT\
+	"DHE-PSK-BIGN-WITH-BELT-DWP-HBELT"
+
+# define BTLS1_RFC_DHT_PSK_BIGN_WITH_BELT_CTR_MAC_HBELT\
+	"BTLS_DHT_PSK_BIGN_WITH_BELT_CTR_MAC_HBELT"
+# define BTLS1_TXT_DHT_PSK_BIGN_WITH_BELT_CTR_MAC_HBELT\
+	"DHT-PSK-BIGN-WITH-BELT-CTR-MAC-HBELT"
+# define BTLS1_RFC_DHT_PSK_BIGN_WITH_BELT_DWP_HBELT\
+	"BTLS_DHT_PSK_BIGN_WITH_BELT_DWP_HBELT"
+# define BTLS1_TXT_DHT_PSK_BIGN_WITH_BELT_DWP_HBELT\
+	"DHT-PSK-BIGN-WITH-BELT-DWP-HBELT"
+
+/* t1_lib.c */
+
+#define BIGN_CURVE256V1_ID 0x0200
+#define BIGN_CURVE384V1_ID 0x0201
+#define BIGN_CURVE512V1_ID 0x0202
+
+/*
+*******************************************************************************
+Инициализация
+*******************************************************************************
+*/
+
+int btls_init();
+
+/*
+*******************************************************************************
+Механизм BIGN_DHE
+*******************************************************************************
+*/
+
+int btls_construct_ske_bign_dhe(SSL_CONNECTION *s, WPACKET *pkt);
+int btls_process_ske_bign_dhe(SSL_CONNECTION *s, PACKET *pkt, EVP_PKEY* *pkey);
+
+/*
+*******************************************************************************
+Механизм BIGN_DHT
+*******************************************************************************
+*/
+
+int btls_construct_cke_bign_dht(SSL_CONNECTION *s, WPACKET *pkt);
+int btls_process_cke_bign_dht(SSL_CONNECTION *s, PACKET *pkt);
+
+/*
+*******************************************************************************
+Механизм BIGN_DHE_PSK
+*******************************************************************************
+*/
+int btls_construct_ske_psk_bign_dhe(SSL_CONNECTION *s, WPACKET *pkt);
+int btls_process_ske_psk_bign_dhe(SSL_CONNECTION *s, PACKET *pkt, EVP_PKEY **pkey);
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif
+
+#endif /* __BTLS_H */
