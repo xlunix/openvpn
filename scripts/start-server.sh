@@ -30,6 +30,14 @@ if [ ! -c /dev/net/tun ]; then
     mknod /dev/net/tun c 10 200
 fi
 
+# Создаем симлинк для bee2evp engine (чтобы OpenSSL мог его найти)
+if [ -f /build/build/install/lib/libbee2evp.so ]; then
+    mkdir -p /usr/lib/x86_64-linux-gnu/engines-3
+    if [ ! -f /usr/lib/x86_64-linux-gnu/engines-3/bee2evp.so ]; then
+        ln -sf /build/build/install/lib/libbee2evp.so /usr/lib/x86_64-linux-gnu/engines-3/bee2evp.so
+    fi
+fi
+
 # Запускаем OpenVPN сервер
 echo "Запуск OpenVPN сервера с конфигурацией /etc/openvpn/server.conf"
 # Ищем openvpn в разных местах
