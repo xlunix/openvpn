@@ -22,6 +22,7 @@ mkdir -p /var/log/openvpn
 if [ ! -f /etc/openvpn/keys/server.key ] || [ ! -f /etc/openvpn/keys/server.crt ]; then
     echo "Ключи не найдены, запускаем генерацию..."
     /scripts/setup-ca.sh
+    sleep 10  # Даем время на генерацию DH параметров
 fi
 
 # Создаем TUN интерфейс
