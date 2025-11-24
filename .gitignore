@@ -1,0 +1,12 @@
+# Ключи и сертификаты (генерируются автоматически)
+vpn-config/client/ca
+vpn-config/client/keys
+
+vpn-config/server/ca
+vpn-config/server/keys
+
+# Тестовая инфраструктура (только для тестовой ветки)
+test-infra/
+SYNC_BRANCHES.md
+sync-branches.sh
+

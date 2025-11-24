@@ -1,0 +1,125 @@
+services:
+  # VPN сервер: создает VPN туннель на 10.8.0.1, слушает на порту 1194
+  # Использует один общий образ для всех сервисов (Dockerfile)
+  openvpn-server:
+    build:
+      context: ..  # Контекст сборки - корневая директория проекта
+      dockerfile: Dockerfile
+    container_name: openvpn-server-test
+    cap_add:
+      - NET_ADMIN  # Для создания сетевых интерфейсов
+    devices:
+      - /dev/net/tun  # TUN интерфейс для VPN
+    networks:
+      vpn-network:
+        ipv4_address: 10.10.0.1  # Docker IP адрес сервера
+    volumes:
+      - ./config/server/server.conf:/etc/openvpn/server.conf:ro  # Тестовая конфигурация сервера
+      - ./config/server/openssl.cnf:/etc/openvpn/openssl.cnf:ro  # Конфигурация OpenSSL
+      - ../scripts:/scripts  # Скрипты запуска
+      - ./scripts/script_test:/script_test  # Тестовые скрипты
+      - test-keys:/etc/openvpn/keys:rw  # Общий volume для ключей (генерируются на сервере)
+      - test-ca:/etc/openvpn/ca:rw  # Общий volume для CA (генерируется на сервере)
+    environment:
+      # Тестовые настройки для генерации сертификатов
+      - CERT_COUNTRY=${CERT_COUNTRY:-BY}
+      - CERT_STATE=${CERT_STATE:-Minsk}
+      - CERT_CITY=${CERT_CITY:-Minsk}
+      - CERT_ORG=${CERT_ORG:-TestVPN}
+      - CERT_OU_CA=${CERT_OU_CA:-IT}
+      - CERT_OU_SERVER=${CERT_OU_SERVER:-Server}
+      - CERT_CN_CA=${CERT_CN_CA:-TestVPN-CA}
+      - CERT_CN_SERVER=${CERT_CN_SERVER:-server}
+    command: /scripts/start-server.sh  # Запуск сервера
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "sh", "-c", "pgrep -f openvpn && ip addr show tun0 > /dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # VPN клиент: подключается к серверу, получает VPN IP 10.8.0.2
+  # Использует тот же образ, что и сервер, но с другой конфигурацией
+  openvpn-client:
+    build:
+      context: ..  # Контекст сборки - корневая директория проекта
+      dockerfile: Dockerfile
+    container_name: openvpn-client-test
+    cap_add:
+      - NET_ADMIN  # Для создания сетевых интерфейсов
+    devices:
+      - /dev/net/tun  # TUN интерфейс для VPN
+    networks:
+      vpn-network:
+        ipv4_address: 10.10.0.10  # Docker IP адрес клиента
+    volumes:
+      - ./config/client/client.conf:/etc/openvpn/client.conf:ro  # Тестовая конфигурация клиента
+      - ./config/client/openssl.cnf:/etc/openvpn/openssl.cnf:ro  # Конфигурация OpenSSL
+      - ../scripts:/scripts  # Скрипты запуска
+      - ./scripts/script_test:/script_test  # Тестовые скрипты
+      - test-keys:/etc/openvpn/keys:ro  # Общий volume для ключей (только чтение)
+      - test-ca:/etc/openvpn/ca:ro  # Общий volume для CA (только чтение)
+    environment:
+      # Тестовые настройки для генерации сертификатов
+      - CERT_COUNTRY=${CERT_COUNTRY:-BY}
+      - CERT_STATE=${CERT_STATE:-Minsk}
+      - CERT_CITY=${CERT_CITY:-Minsk}
+      - CERT_ORG=${CERT_ORG:-TestVPN}
+      - CERT_OU_CA=${CERT_OU_CA:-IT}
+      - CERT_OU_CLIENT=${CERT_OU_CLIENT:-Client}
+      - CERT_CN_CA=${CERT_CN_CA:-TestVPN-CA}
+      - CERT_CN_CLIENT=${CERT_CN_CLIENT:-client}
+    command: /scripts/start-client.sh  # Запуск клиента
+    depends_on:
+      openvpn-server:
+        condition: service_healthy  # Ждет, пока сервер станет здоровым
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "sh", "-c", "pgrep -f openvpn && ip addr show tun0 > /dev/null 2>&1 && ping -c 1 -W 2 10.8.0.1 > /dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Тестовый контейнер для проверки ping через VPN сеть
+  # Запускается по требованию: docker compose run --rm test-ping
+  # Использует VPN соединение через клиентский контейнер
+  test-ping:
+    build:
+      context: ..  # Контекст сборки - корневая директория проекта
+      dockerfile: Dockerfile
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun
+    networks:
+      vpn-network:
+        ipv4_address: 10.10.0.20  # Docker IP адрес тестового контейнера
+    volumes:
+      - ../scripts:/scripts
+      - ./scripts/script_test:/script_test
+    # Тест выполняется внутри клиентского контейнера, который уже подключен к VPN
+    command: /bin/bash -c "echo 'Тест выполняется через клиентский контейнер' && exit 0"
+    depends_on:
+      openvpn-server:
+        condition: service_healthy
+      openvpn-client:
+        condition: service_healthy
+    profiles:
+      - test  # Запускается только с профилем test
+
+networks:
+  vpn-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.10.0.0/24
+          gateway: 10.10.0.254
+
+volumes:
+  test-keys:
+    driver: local
+  test-ca:
+    driver: local

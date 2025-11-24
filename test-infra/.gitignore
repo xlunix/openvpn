@@ -1,0 +1,12 @@
+# Временные файлы тестов
+*.log
+*.tmp
+
+# Docker volumes (если создаются локально)
+volumes/
+
+# Тестовые ключи и сертификаты (генерируются автоматически)
+config/server/keys/
+config/server/ca/
+config/client/keys/
+config/client/ca/
