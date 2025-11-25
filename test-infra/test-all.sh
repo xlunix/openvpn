@@ -97,6 +97,13 @@ if $COMPOSE_CMD -f $COMPOSE_FILE ps openvpn-server | grep -q "Up"; then
             \$OPENVPN_BIN --version | head -1; \
             echo \"  Библиотеки OpenSSL:\"; \
             ldd \"\$OPENVPN_BIN\" 2>/dev/null | grep -E '(ssl|crypto)' | sed 's/^/    /' || echo '    (не найдено)'; \
+            echo \"  Поддержка engines:\"; \
+            if \$OPENVPN_BIN --show-engines 2>&1 | grep -q \"OpenSSL Crypto Engines\"; then \
+                echo \"    Engines доступны:\"; \
+                \$OPENVPN_BIN --show-engines 2>&1 | grep -E '\[.*\]' | sed 's/^/      /'; \
+            else \
+                echo \"    Engines недоступны (OpenVPN собран без поддержки engines)\"; \
+            fi; \
         fi" 2>&1
     echo ""
     echo "bee2evp:"
