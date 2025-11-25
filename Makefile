@@ -234,9 +234,38 @@ $(OPENVPN_BUILD_DIR)/.build_done: $(BEE2EVP_BUILD_DIR)/.build_done $(OPENSSL_BUI
 	      -DENABLE_LZO=ON \
 	      -DENABLE_PKCS11=ON \
 	      -DBUILD_TESTING=OFF \
+	      -DCMAKE_C_FLAGS="-Wno-deprecated-declarations" \
 	      $$OPENSSL_FLAGS \
 	      ../../openvpn
 	cd $(OPENVPN_BUILD_DIR) && cmake --build . --config $(CMAKE_BUILD_TYPE)
+	@# Включаем поддержку engines в config.h после первой сборки (config.h генерируется во время сборки)
+	@if [ -f $(INSTALL_DIR_ABS)/include/openssl/engine.h ]; then \
+		echo "Включение поддержки OpenSSL engines в config.h после сборки..."; \
+		CONFIG_H=""; \
+		OPENVPN_BUILD_ABS="$(CURDIR)/$(OPENVPN_BUILD_DIR)"; \
+		for path in "$$OPENVPN_BUILD_ABS/config.h" "$$OPENVPN_BUILD_ABS/src/config.h"; do \
+			if [ -f "$$path" ]; then \
+				CONFIG_H="$$path"; \
+				break; \
+			fi; \
+		done; \
+		if [ -n "$$CONFIG_H" ] && [ -f "$$CONFIG_H" ]; then \
+			if grep -q "#undef HAVE_OPENSSL_ENGINE" "$$CONFIG_H" 2>/dev/null; then \
+				sed -i 's|#undef HAVE_OPENSSL_ENGINE|#define HAVE_OPENSSL_ENGINE 1|' "$$CONFIG_H"; \
+				echo "  Поддержка engines включена в config.h ($$CONFIG_H)"; \
+				echo "  Пересборка openvpn с поддержкой engines..."; \
+				cd $(OPENVPN_BUILD_DIR) && \
+				rm -f CMakeFiles/openvpn.dir/src/openvpn/crypto_openssl.c.o && \
+				cmake --build . --config $(CMAKE_BUILD_TYPE) --target openvpn; \
+			elif grep -q "#define HAVE_OPENSSL_ENGINE" "$$CONFIG_H" 2>/dev/null; then \
+				echo "  Поддержка engines уже включена в config.h"; \
+			else \
+				echo "   config.h найден, но не содержит HAVE_OPENSSL_ENGINE"; \
+			fi; \
+		else \
+			echo "   config.h не найден в $$OPENVPN_BUILD_ABS/"; \
+		fi; \
+	fi
 	cd $(OPENVPN_BUILD_DIR) && cmake --install .
 	touch $@
 
