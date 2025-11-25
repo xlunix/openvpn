@@ -29,12 +29,27 @@ COPY bee2evp/ /build/bee2evp/
 COPY openvpn/ /build/openvpn/
 COPY Makefile /build/
 
+# Копирование скриптов
+COPY scripts/ /scripts/
+RUN chmod +x /scripts/*.sh
+
 # Установка переменных окружения
 ENV CMAKE_BUILD_TYPE=Release
 ENV PATH=/build/build/install/bin:$PATH
 
-# Сборка всех компонентов
-RUN make all && \
+# Сборка всех компонентов (bee2 -> openssl с патчами -> bee2evp -> openvpn)
+RUN echo "=== Сборка всех компонентов ===" && \
+    echo "Порядок: bee2 -> OpenSSL с патчами для bee2evp -> bee2evp -> openvpn" && \
+    make all 2>&1 | tee /tmp/build.log && \
+    echo "=== Проверка собранных компонентов ===" && \
+    echo "OpenSSL:" && \
+    ls -lh /build/build/install/bin/openssl 2>/dev/null || (echo "  OpenSSL не найден в /build/build/install/bin/" && tail -20 /tmp/build.log) && \
+    echo "Библиотеки OpenSSL:" && \
+    ls -lh /build/build/install/lib/libssl.so* /build/build/install/lib/libcrypto.so* 2>/dev/null | head -4 || echo "  Библиотеки OpenSSL не найдены" && \
+    echo "bee2evp:" && \
+    ls -lh /build/build/install/lib/libbee2evp.so* 2>/dev/null || echo "  libbee2evp не найден" && \
+    echo "OpenVPN:" && \
+    find /build -name openvpn -type f -executable 2>/dev/null | head -1 | xargs ls -lh 2>/dev/null || (echo "  OpenVPN не найден" && tail -30 /tmp/build.log) && \
     export LD_LIBRARY_PATH=/build/build/install/lib:$LD_LIBRARY_PATH
 
 # Настройка OpenSSL для использования bee2evp engine
