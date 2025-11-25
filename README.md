@@ -1,59 +1,23 @@
 # OpenVPN
 
-Проект для интеграции OpenVPN с криптографическими библиотеками bee2 и bee2evp.
+Проект для интеграции OpenVPN с криптографическими библиотеками белорусского алгоритма шифрования Belt.
 
-## Как добавлены проекты
 
-Проекты интегрированы в репозиторий с помощью **git subtree**. Это позволяет хранить код сторонних репозиториев непосредственно в нашем репозитории, сохраняя при этом возможность получать обновления из исходных источников.
+## Как собрать рабочий контейнер
 
-### Команды добавления
-
-```bash
-git subtree add --prefix=bee2 https://github.com/agievich/bee2.git master --squash
-git subtree add --prefix=bee2evp https://github.com/bcrypto/bee2evp.git master --squash
-git subtree add --prefix=openvpn git@github.com:OpenVPN/openvpn.git master --squash
+Так как для работы OpenVPN необходим пропатченный OpenSSL с BTLS, был доработан Dockerfile на базе готового контейнера с собранным openssl v3.3.1 (Оригинал dockerfiles/debian.Dockerfile). Все необходимые изменения вплоть до сборки OpenVPN были внесены в файл dockerfiles/debian.Dockerfile. Для сборки выполнить следующую команду в директории bee2evp:
+```
+# OpenVPN 2.5.0 + Lib OpenSSL 3.3.1 + Bee2evp engine
+docker build --progress="plain" -f dockerfiles/debian_vpn.Dockerfile \
+   -t bcrypto/bee2evp:3.3.1 --build-arg OPENSSL_TAG=openssl-3.3.1 . 
 ```
 
-## Для чего это сделано
-
-**Git subtree** используется вместо git submodule по следующим причинам:
-
-- **Полная автономность** — весь код физически присутствует в репозитории, работа возможна без доступа к внешним репозиториям
-- **Упрощенное развертывание** — не требуется дополнительных шагов для клонирования подмодулей
-- **Безопасность** — нет риска случайной отправки изменений в сторонние репозитории
-- **История изменений** — вся история проекта хранится в одном месте
-
-## Преимущества подхода
-
-**Независимость от внешних сервисов** — проект работает даже при недоступности GitHub или других хостингов
-**Простота сборки** — достаточно одного `git clone`, все зависимости уже включены
-**Контроль версий** — можно фиксировать конкретные версии зависимостей, не завися от изменений в upstream
-**Локальные изменения** — можно вносить изменения в интегрированный код, они останутся в НАШЕМ РЕПОЗИТОРИИ 
-**Обновляемость** — при необходимости можно получать актуальные версии из исходных репозиториев
-
-## Обновление проектов
-
-Для получения последних изменений из upstream-репозиториев используйте команды:
-
-```bash
-git subtree pull --prefix=bee2 https://github.com/agievich/bee2.git master --squash
-git subtree pull --prefix=bee2evp https://github.com/bcrypto/bee2evp.git master --squash
-git subtree pull --prefix=openvpn git@github.com:OpenVPN/openvpn.git master --squash
-```
-
-### Примечания
-
-- Флаг `--squash` объединяет все изменения из upstream в один коммит, что упрощает историю
-- При обновлении возможны конфликты, которые нужно разрешать вручную
-- Изменения, внесенные локально в интегрированные проекты, сохраняются, но не отправляются в upstream
 
 ## Структура проекта
 
 ```
 openvpn/
-├── bee2/          # Криптографическая библиотека
 ├── bee2evp/       # OpenSSL engine для bee2
-├── openvpn/       # VPN-сервер и клиенты
 └── README.md      # Документация
 ```
 
@@ -61,6 +25,4 @@ openvpn/
 
 | Проект | Описание | Исходный репозиторий | Ветка |
 |--------|----------|---------------------|-------|
-| **bee2** | Криптографическая библиотека | [agievich/bee2](https://github.com/agievich/bee2) | `master` |
 | **bee2evp** | OpenSSL engine для bee2 | [bcrypto/bee2evp](https://github.com/bcrypto/bee2evp) | `master` |
-| **openvpn** | VPN-сервер и клиенты | [OpenVPN/openvpn](https://github.com/OpenVPN/openvpn) | `master` |
