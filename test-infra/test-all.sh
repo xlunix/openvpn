@@ -43,6 +43,8 @@ echo ""
 # Пересборка образов
 echo "=== Пересборка Docker образов ==="
 echo "Это может занять некоторое время..."
+echo "Будут собраны: bee2, OpenSSL с патчами для bee2evp, bee2evp, openvpn"
+echo ""
 $COMPOSE_CMD -f $COMPOSE_FILE build --no-cache || {
     echo " Ошибка при сборке образов"
     exit 1
@@ -71,6 +73,58 @@ fi
 
 echo ""
 
+# 1.1. Проверка версий и используемых библиотек
+echo "=== 1.1. Проверка версий и используемых библиотек ==="
+echo "Проверяем, какие версии bee2, OpenSSL и OpenVPN используются..."
+if $COMPOSE_CMD -f $COMPOSE_FILE ps openvpn-server | grep -q "Up"; then
+    echo ""
+    echo "OpenSSL:"
+    $COMPOSE_CMD -f $COMPOSE_FILE exec -T openvpn-server sh -c \
+        "if [ -f /build/build/install/bin/openssl ]; then \
+            echo '  Используется СОБРАННЫЙ OpenSSL:'; \
+            /build/build/install/bin/openssl version; \
+            echo '  Путь: /build/build/install/bin/openssl'; \
+        else \
+            echo '   Используется СИСТЕМНЫЙ OpenSSL:'; \
+            openssl version; \
+        fi" 2>&1
+    echo ""
+    echo "OpenVPN:"
+    $COMPOSE_CMD -f $COMPOSE_FILE exec -T openvpn-server sh -c \
+        "OPENVPN_BIN=\$(find /build -name openvpn -type f -executable 2>/dev/null | head -1); \
+        if [ -n \"\$OPENVPN_BIN\" ]; then \
+            echo \"  Путь: \$OPENVPN_BIN\"; \
+            \$OPENVPN_BIN --version | head -1; \
+            echo \"  Библиотеки OpenSSL:\"; \
+            ldd \"\$OPENVPN_BIN\" 2>/dev/null | grep -E '(ssl|crypto)' | sed 's/^/    /' || echo '    (не найдено)'; \
+        fi" 2>&1
+    echo ""
+    echo "bee2evp:"
+    $COMPOSE_CMD -f $COMPOSE_FILE exec -T openvpn-server sh -c \
+        "if [ -f /build/build/install/lib/libbee2evp.so ]; then \
+            echo '   libbee2evp.so найден'; \
+            ls -lh /build/build/install/lib/libbee2evp.so* | head -1 | awk '{print \"    \" \$9 \" -> \" \$10}'; \
+        else \
+            echo '   libbee2evp.so не найден'; \
+        fi" 2>&1
+else
+    echo " Контейнер не запущен, пропускаем проверку"
+fi
+echo ""
+
+# 1.2. Проверка bee2evp (быстрая проверка перед основными тестами)
+echo "=== 1.2. Быстрая проверка bee2evp ==="
+if [ -f "./scripts/script_test/check-bee2.sh" ]; then
+    echo "Запуск быстрой проверки bee2evp на сервере..."
+    $COMPOSE_CMD -f $COMPOSE_FILE exec -T openvpn-server bash /script_test/check-bee2.sh 2>&1 | grep -E "(|||Engine bee2evp|алгоритмы bee2|СОБРАННЫЙ|СИСТЕМНЫЙ)" | head -15 || {
+        echo " Предупреждение: проверка bee2evp не прошла полностью"
+    }
+else
+    echo " Скрипт check-bee2.sh не найден, пропускаем проверку bee2evp"
+fi
+
+echo ""
+
 # 2. Запуск тестов ping через VPN (выполняем внутри клиентского контейнера)
 echo "=== 2. Запуск тестов ping ==="
 $COMPOSE_CMD -f $COMPOSE_FILE exec -T openvpn-client bash /script_test/test-ping.sh || {
@@ -89,15 +143,24 @@ $COMPOSE_CMD -f $COMPOSE_FILE exec -T openvpn-client ping -c 5 10.8.0.1 || {
 
 echo ""
 
-# 4. Проверка bee2evp engine
-echo "=== 4. Проверка bee2evp ==="
-BEE2EVP_OUTPUT=$($COMPOSE_CMD -f $COMPOSE_FILE exec -T openvpn-server openssl engine -c -t bee2evp 2>&1)
-if echo "$BEE2EVP_OUTPUT" | grep -q "available"; then
-    echo " bee2evp engine работает"
-    echo "$BEE2EVP_OUTPUT" | head -3
+# 4. Полная проверка bee2evp (используем скрипт check-bee2.sh)
+echo "=== 4. Полная проверка bee2evp ==="
+if [ -f "./scripts/script_test/check-bee2.sh" ]; then
+    echo "Запуск скрипта проверки bee2evp на сервере..."
+    $COMPOSE_CMD -f $COMPOSE_FILE exec -T openvpn-server bash /script_test/check-bee2.sh || {
+        echo " Проверка bee2evp не прошла"
+        echo " Продолжаем выполнение тестов..."
+    }
 else
-    echo " bee2evp engine не найден или не работает"
-    echo "$BEE2EVP_OUTPUT" | tail -5
+    echo " Скрипт check-bee2.sh не найден, используем базовую проверку"
+    BEE2EVP_OUTPUT=$($COMPOSE_CMD -f $COMPOSE_FILE exec -T openvpn-server openssl engine -c -t bee2evp 2>&1)
+    if echo "$BEE2EVP_OUTPUT" | grep -q "available"; then
+        echo " bee2evp engine работает"
+        echo "$BEE2EVP_OUTPUT" | head -3
+    else
+        echo " bee2evp engine не найден или не работает"
+        echo "$BEE2EVP_OUTPUT" | tail -5
+    fi
 fi
 
 echo ""

@@ -120,6 +120,14 @@ echo ""
 # 4. Проверка bee2 и bee2evp библиотек
 echo "4. Проверка bee2 и bee2evp..."
 echo "-----------------------------"
+# Если доступен скрипт check-bee2.sh, используем его для детальной проверки
+if [ -f "./scripts/script_test/check-bee2.sh" ] && $COMPOSE_CMD -f $COMPOSE_FILE ps openvpn-server | grep -q "Up"; then
+    echo "Запуск детальной проверки bee2evp..."
+    $COMPOSE_CMD -f $COMPOSE_FILE exec -T openvpn-server bash /script_test/check-bee2.sh 2>&1 | head -50
+    echo ""
+    echo "Продолжаем базовую проверку..."
+    echo ""
+fi
 if $COMPOSE_CMD -f $COMPOSE_FILE ps openvpn-server | grep -q "Up"; then
     # Проверка наличия библиотек (ищем во всем /build, не только в install/lib)
     BEE2_LIB=$($COMPOSE_CMD -f $COMPOSE_FILE exec -T openvpn-server find /build -name "libbee2.so*" -type f 2>/dev/null | head -1)
