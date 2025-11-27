@@ -1,0 +1,39 @@
+version: "3.8"
+
+volumes:
+  ovpn_data:
+
+services:
+  ovpn-server:
+    build: 
+      context: .
+      dockerfile: server/Dockerfile
+      args:
+        - OPENSSL_TAG=openssl-3.3.1
+    container_name: ovpn-server
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - "1194:1194/udp"
+    volumes:
+      - ovpn_data:/etc/openvpn/certs
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    restart: unless-stopped
+
+  ovpn-client:
+    build: 
+      context: .
+      dockerfile: client/Dockerfile
+      args:
+        - OPENSSL_TAG=openssl-3.3.1
+    container_name: ovpn-client
+    depends_on:
+      - ovpn-server
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - ovpn_data:/etc/openvpn/certs
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    command: ["/bin/sh", "-c", "sleep 4 && /entrypoint.sh"]

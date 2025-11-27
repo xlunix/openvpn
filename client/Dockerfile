@@ -6,19 +6,22 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /usr/src/bee2evp
-
-COPY . .
+COPY bee2evp .
 
 ARG OPENSSL_TAG
-
 RUN bash ./scripts/build.sh -s -b -t ${OPENSSL_TAG}
 
 ENV LD_LIBRARY_PATH=/usr/src/bee2evp/build/local/lib:$LD_LIBRARY_PATH
 ENV PKG_CONFIG_PATH=/usr/src/bee2evp/build/local/lib/pkgconfig:$PKG_CONFIG_PATH
 
 RUN git clone --branch v2.5.0 https://github.com/OpenVPN/openvpn.git
-
 WORKDIR /usr/src/bee2evp/openvpn
-RUN autoreconf -i -v -f && bash ./configure && make && make install
+RUN autoreconf -i -v -f && ./configure && make && make install
 
 RUN openvpn --show-tls && openvpn --show-ciphers && openvpn --show-engines
+
+COPY client/sample_client.conf /etc/openvpn/client.conf
+COPY client/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
