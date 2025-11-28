@@ -2,7 +2,7 @@ FROM debian:bookworm-slim
 
 RUN apt-get update \
   && apt-get install -y \
-  git gcc cmake python3 doxygen autoconf libtool pkg-config libnl-genl-3-dev libcap-ng-dev liblzo2-dev libpam0g-dev liblz4-dev \
+  git gcc cmake python3 doxygen autoconf libtool pkg-config libnl-genl-3-dev libcap-ng-dev liblzo2-dev libpam0g-dev liblz4-dev net-tools nano iputils-ping \
   && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /usr/src/bee2evp

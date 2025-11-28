@@ -36,6 +36,5 @@ RUN openssl genpkey -engine bee2evp -algorithm bign -pkeyopt params:bign-curve25
     openssl req -new -engine bee2evp -key client.key -out client.csr -subj "/CN=Client" && \
     openssl x509 -req -engine bee2evp -in client.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out client.crt -days 365 -sha256
 
-COPY sample_server.conf ./server.conf
-COPY sample_client.conf ./client.conf
-
+COPY server/sample_server.conf ./server.conf
+COPY client/sample_client.conf ./client.conf

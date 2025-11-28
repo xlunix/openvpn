@@ -36,4 +36,4 @@ services:
       - ovpn_data:/etc/openvpn/certs
     devices:
       - /dev/net/tun:/dev/net/tun
-    command: ["/bin/sh", "-c", "sleep 4 && /entrypoint.sh"]
+    command: ["/bin/sh", "-c", "sleep 4 && /entrypoint.sh"]  

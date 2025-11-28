@@ -12,5 +12,5 @@ if [ ! -f "$CERT_DIR/client.key" ]; then
     exit 1
 fi
 
-echo "[Client] Launching OpenVPN..."
+echo "[Client] Launching OpenVPN ..."
 exec openvpn --config /etc/openvpn/client.conf
