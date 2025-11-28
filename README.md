@@ -100,12 +100,43 @@ docker build -f client/Dockerfile -t ovpn-client:local .
 
 ## 🔎 Отладка и проверка
 
-- Посмотреть доступные движки OpenSSL в контейнере:
+Ниже — быстрые команды, которые помогут проверить доступность движка `bee2evp`, список шифров и TLS-возможности в вашей сборке OpenVPN.
+
+### Локально / внутри образа
+
+Запуск на машине или внутри контейнера с установленным `openvpn`:
 
 ```bash
+# Показать доступные OpenSSL engines, в том числе "bee2evp"
 openvpn --show-engines
+
+# Показать все поддерживаемые OpenVPN шифры / TLS-шифры
 openvpn --show-ciphers
+
+# Показать набор TLS-опций и поддерживаемые параметры TLS
 openvpn --show-tls
+```
+
+### В запущенном Docker-контейнере
+
+Если вы используете `docker compose up` (в корне проекта), то можно выполнить команды внутри работающего контейнера сервера:
+
+```bash
+docker compose exec ovpn-server openvpn --show-engines
+docker compose exec ovpn-server openvpn --show-ciphers
+docker compose exec ovpn-server openvpn --show-tls
+```
+
+Если контейнер уже запущен, но вы предпочитаете docker cli напрямую:
+
+```bash
+docker exec -it ovpn-server openvpn --show-engines
+```
+
+Или запустить временный контейнер на базе локального образа:
+
+```bash
+docker run --rm -it ovpn-server:local openvpn --show-engines
 ```
 
 - Логи контейнера — `docker compose logs -f <service>`.
