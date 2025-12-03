@@ -1,61 +1,57 @@
-
 # Dockerfile для сборки bee2, bee2evp и openvpn
-FROM debian
+FROM debian:bookworm-slim
 
 # Установка необходимых зависимостей
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    cmake \
-    git \
-    pkg-config \
-    libssl-dev \
-    liblz4-dev \
-    liblzo2-dev \
-    libpkcs11-helper1-dev \
-    libcap-ng-dev \
-    libnl-genl-3-dev \
-    python3 \
-    iputils-ping \
-    netcat-openbsd \
-    iproute2 \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update \
+  && apt-get install -y \
+  git \
+  gcc \
+  cmake \
+  python3 \
+  doxygen \
+  autoconf \
+  libtool \
+  pkg-config \
+  libnl-genl-3-dev \
+  libcap-ng-dev \
+  liblzo2-dev \
+  libpam0g-dev \
+  liblz4-dev \
+  net-tools \
+  nano \
+  && rm -rf /var/lib/apt/lists/*
+
 
 # Создание рабочей директории
-WORKDIR /build
+WORKDIR /usr/src/bee2evp
 
-# Копирование исходного кода
-COPY bee2/ /build/bee2/
-COPY bee2evp/ /build/bee2evp/
-COPY openvpn/ /build/openvpn/
-COPY Makefile /build/
+# Копирование исходного кода и скриптов конфигурации
+COPY bee2evp/ .
+RUN rm -rf ./bee2 && \
+    mkdir ./bee2 && \
+    mkdir ./openssl && \
+    mkdir ./openvpn
+COPY bee2/ ./bee2
+COPY openssl/ ./openssl
+COPY openvpn/ ./openvpn
+COPY scripts/its_bc_build.sh ./scripts
+COPY scripts/its_bc_source.sh ./scripts
 
-# Установка переменных окружения
-ENV CMAKE_BUILD_TYPE=Release
-ENV PATH=/build/build/install/bin:$PATH
+# Запуск сборки Openssl v3.3.1 + bee2 + bee2evp + patch btls
+ARG OPENSSL_TAG=openssl-3.3.1
+RUN bash ./scripts/its_bc_build.sh  -s -b -t ${OPENSSL_TAG}
+ENV LD_LIBRARY_PATH=/usr/src/bee2evp/build/local/lib
+ENV PKG_CONFIG_PATH=/usr/src/bee2evp/build/local/lib/pkgconfig
 
-# Сборка всех компонентов
-RUN make all && \
-    export LD_LIBRARY_PATH=/build/build/install/lib:$LD_LIBRARY_PATH
+# Собираем Openvpn v2.5.0 на базе ранее собранного openssl
+WORKDIR /usr/src/bee2evp/openvpn
+RUN autoreconf -i -v -f && bash ./configure && make && make install
 
-# Настройка OpenSSL для использования bee2evp engine
-RUN if [ -f /build/build/install/openssl.cnf.dist ]; then \
-        cp /build/build/install/openssl.cnf.dist /build/build/install/openssl.cnf; \
-    fi && \
-    if [ -f /build/build/install/openssl.cnf ]; then \
-        echo "" >> /build/build/install/openssl.cnf && \
-        echo "openssl_conf = openssl_init" >> /build/build/install/openssl.cnf && \
-        echo "[openssl_init]" >> /build/build/install/openssl.cnf && \
-        echo "engines = engine_section" >> /build/build/install/openssl.cnf && \
-        echo "[engine_section]" >> /build/build/install/openssl.cnf && \
-        echo "bee2evp = bee2evp_section" >> /build/build/install/openssl.cnf && \
-        echo "[bee2evp_section]" >> /build/build/install/openssl.cnf && \
-        echo "engine_id = bee2evp" >> /build/build/install/openssl.cnf && \
-        echo "dynamic_path = /build/build/install/lib/libbee2evp.so" >> /build/build/install/openssl.cnf && \
-        echo "default_algorithms = ALL" >> /build/build/install/openssl.cnf; \
-    fi
+# Проверка, что openvpn правильно собран и видит белорусские алгоритмы
+RUN openvpn --show-tls && openvpn --show-ciphers && openvpn --show-engines
 
 # Создание точки входа
-WORKDIR /build/build/install
+WORKDIR /usr/src/bee2evp
 
 # По умолчанию запускаем bash
 CMD ["/bin/bash"]
