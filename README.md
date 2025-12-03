@@ -1,6 +1,6 @@
-# OpenVPN
+# OpenVPN 🚀
 
-Проект для интеграции OpenVPN с криптографическими библиотеками bee2 и bee2evp.
+Проект для интеграции OpenVPN с криптографическими библиотеками bee2 и bee2evp и патчем btls.
 
 ## Как добавлены проекты
 
@@ -11,7 +11,8 @@
 ```bash
 git subtree add --prefix=bee2 https://github.com/agievich/bee2.git master --squash
 git subtree add --prefix=bee2evp https://github.com/bcrypto/bee2evp.git master --squash
-git subtree add --prefix=openvpn git@github.com:OpenVPN/openvpn.git master --squash
+git subtree add --prefix=openvpn https://github.com/OpenVPN/openvpn.git v2.5.0 --squash
+git subtree add --prefix=openssl https://github.com/openssl/openssl.git openssl-3.3.1 --squash
 ```
 
 ## Для чего это сделано
@@ -38,7 +39,8 @@ git subtree add --prefix=openvpn git@github.com:OpenVPN/openvpn.git master --squ
 ```bash
 git subtree pull --prefix=bee2 https://github.com/agievich/bee2.git master --squash
 git subtree pull --prefix=bee2evp https://github.com/bcrypto/bee2evp.git master --squash
-git subtree pull --prefix=openvpn git@github.com:OpenVPN/openvpn.git master --squash
+git subtree pull --prefix=openvpn https://github.com/OpenVPN/openvpn.git v2.5.0 --squash
+git subtree pull --prefix=openssl https://github.com/openssl/openssl.git openssl-3.3.1 --squash
 ```
 
 ### Примечания
@@ -53,7 +55,10 @@ git subtree pull --prefix=openvpn git@github.com:OpenVPN/openvpn.git master --sq
 openvpn/
 ├── bee2/          # Криптографическая библиотека
 ├── bee2evp/       # OpenSSL engine для bee2
-├── openvpn/       # VPN-сервер и клиенты
+├── openssl/       # Набор инструментов для протоколов TLS, Transport Layer Security (TLS, ранее SSL), Datagram TLS (DTLS) и QUIC.
+├── openvpn/       # Инструмент для создания зашифрованных туннелей (VPN) между компьютерами через интернет
+├── scripts/       # Скрипты для кастомной сборки Openssl + белорусская криптография
+├── Dockerfile     # Dockerfile для сборки рабочего образа
 └── README.md      # Документация
 ```
 
@@ -63,4 +68,24 @@ openvpn/
 |--------|----------|---------------------|-------|
 | **bee2** | Криптографическая библиотека | [agievich/bee2](https://github.com/agievich/bee2) | `master` |
 | **bee2evp** | OpenSSL engine для bee2 | [bcrypto/bee2evp](https://github.com/bcrypto/bee2evp) | `master` |
-| **openvpn** | VPN-сервер и клиенты | [OpenVPN/openvpn](https://github.com/OpenVPN/openvpn) | `master` |
+| **openvpn** | Инструмент для создания зашифрованных туннелей (VPN) между компьютерами через интернет| [OpenVPN/openvpn](https://github.com/OpenVPN/openvpn) | `v2.5.0` |
+| **openssl** | Набор инструментов для протоколов TLS, Transport Layer Security (TLS, ранее SSL), Datagram TLS (DTLS) и QUIC. | [openssl/openssl](https://github.com/openssl/openssl) | `openssl-3.3.1` |
+
+## Docker: сборка и запуск 🐳
+
+Если вы хотите собрать и запустить проект в Docker-контейнере, используйте следующие команды.
+
+Сборка образа (рекомендуется без кэша для чистой сборки):
+
+```bash
+docker build --no-cache --progress="plain" -t its/openvpn_bc .
+```
+
+Запуск контейнера (интерактивная сессия с bash):
+
+```bash
+docker run --rm -it its/openvpn_bc bash
+```
+
+Эти команды помогут быстро получить рабочую среду для отладки и тестирования проекта. 🚀
+
