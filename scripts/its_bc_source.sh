@@ -174,7 +174,6 @@ system_opt(){
 clean(){
   green echo "[-] clean build files..."
   rm -rf $build_root
-  rm -rf $openssl
 }
 
 check_prereq(){
@@ -191,18 +190,6 @@ check_prereq(){
   done
   set -e
   export GIT_REDIRECT_STDERR='2>&1'
-}
-
-# Check if openssl tag exist.
-check_openssl_tag(){
-  green echo "[-] check openssl tag"
-  git ls-remote $openssl_git_url refs/tags/$openssl_tag
-}
-
-update_repos(){
-  green echo "[-] update repos"
-  git submodule update --init
-  git clone -b $openssl_tag --depth 1 $openssl_git_url $openssl
 }
 
 patch_openssl(){
@@ -313,8 +300,6 @@ setup(){
   green echo "Setup..."
   clean
   check_prereq
-  check_openssl_tag
-  update_repos
   patch_openssl
   green echo "Setup ended"
 }
